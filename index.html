@@ -328,20 +328,29 @@ body.dark-theme {
           </div>
         </div>
         
-        <div id="settings" class="tab-content">
-          <div class="card">
-            <h2>Configuración</h2>
-            <div class="button-group flex-col md:flex-row">
-              <button id="export-data">Exportar Datos</button>
-              <label for="import-data" class="button px-4 py-2 cursor-pointer rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors text-center">Importar Datos</label>
-              <input type="file" id="import-data" accept=".json" class="hidden">
-              <button id="reset-data" class="bg-red-500 hover:bg-red-700">Restablecer Datos</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+<div id="settings" class="tab-content">
+  <div class="card">
+    <h2>Configuración</h2>
+    <div class="button-group flex-col md:flex-row">
+      <button id="export-data">Exportar Datos</button>
+      <label for="import-data" class="button px-4 py-2 cursor-pointer rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors text-center">Importar Datos</label>
+      <input type="file" id="import-data" accept=".json" class="hidden">
+      <button id="reset-data" class="bg-red-500 hover:bg-red-700">Restablecer Datos</button>
+    </div>
   </div>
+  <div class="card mt-4">
+    <h2>Cambiar Nombre de Usuario</h2>
+    <div class="form-group">
+      <label for="current-user-name">Nombre actual</label>
+      <input type="text" id="current-user-name" disabled>
+    </div>
+    <div class="form-group">
+      <label for="new-user-name">Nuevo nombre de usuario</label>
+      <input type="text" id="new-user-name" placeholder="Ingresa un nuevo nombre">
+    </div>
+    <button id="update-name-button" class="mt-2">Actualizar Nombre</button>
+  </div>
+</div>
 
   <div id="authModal" class="modal">
     <div class="modal-content">
@@ -403,6 +412,16 @@ body.dark-theme {
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     // **NOTA IMPORTANTE: Asegúrate de que esta configuración coincida exactamente con la de tu proyecto de Firebase**
+  const updateUserName = async (newName) => {
+    if (!db || !userId) return;
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, {
+      name: newName
+    });
+    showModal('Nombre de usuario actualizado con éxito.');
+    // La UI se actualizará automáticamente gracias al listener en onAuthStateChanged
+  };
+    
     const firebaseConfig = {
       apiKey: "AIzaSyAwH7uq-TGTvn_PJhalYRRp6XskkZcTBP8",
       authDomain: "balancehubapp.firebaseapp.com",
@@ -882,6 +901,14 @@ body.dark-theme {
        ============================ */
     document.addEventListener('DOMContentLoaded', () => {
       // Configuración de pestañas y tema
+      document.getElementById('update-name-button').addEventListener('click', () => {
+        const newName = document.getElementById('new-user-name').value.trim();
+        if (newName) {
+          updateUserName(newName);
+        } else {
+          showModal('El nuevo nombre no puede estar vacío.');
+        }
+      });
       const setupTabs = () => {
         const tabs = document.querySelectorAll('.tab');
         const contents = document.querySelectorAll('.tab-content');
