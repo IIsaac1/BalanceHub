@@ -22,8 +22,18 @@ header h1 {margin:0;}
 .container {max-width:1200px;margin:0 auto;padding:20px;}
 .theme-selector {display:flex;justify-content:flex-end;margin-bottom:1rem;}
 .tab-container {margin-bottom:2rem;}
-.tabs {display:flex;flex-wrap:wrap;border-bottom:1px solid #ddd;}
-.tab {padding:10px 20px;cursor:pointer;transition:background-color 0.3s;border-top-left-radius:10px;border-top-right-radius:10px;margin-right:2px;background-color:#eee;}
+.tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  border-bottom: 1px solid #ddd;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Para un desplazamiento suave en iOS */
+  scrollbar-width: none; /* Para Firefox */
+}
+.tabs::-webkit-scrollbar {
+  display: none; /* Para Chrome, Safari y Opera */
+}
+.tab {padding:10px 20px;cursor:pointer;transition:background-color 0.3s;border-top-left-radius:10px;border-top-right-radius:10px;margin-right:2px;background-color:#eee;flex-shrink: 0;}
 .tab.active {background-color:#fff;border:1px solid #ddd;border-bottom:none;font-weight:bold;color:var(--secondary-color);}
 .tab-content {display:none;padding:20px;background-color:#fff;border:1px solid #ddd;border-top:none;border-bottom-left-radius:10px;border-bottom-right-radius:10px;}
 .tab-content.active {display:block;}
@@ -185,6 +195,14 @@ body.dark-theme {
               <label for="account-balance">Balance inicial</label>
               <input type="number" id="account-balance" placeholder="0.00" value="0" min="0">
             </div>
+            <div class="form-group">
+              <label for="account-currency">Moneda</label>
+              <select id="account-currency">
+                <option value="DOP">Peso Dominicano (DOP)</option>
+                <option value="USD">Dólar Estadounidense (USD)</option>
+                <option value="EUR">Euro (EUR)</option>
+              </select>
+            </div>
             <div class="button-group">
               <button id="add-account">Añadir Cuenta</button>
             </div>
@@ -328,29 +346,20 @@ body.dark-theme {
           </div>
         </div>
         
-<div id="settings" class="tab-content">
-  <div class="card">
-    <h2>Configuración</h2>
-    <div class="button-group flex-col md:flex-row">
-      <button id="export-data">Exportar Datos</button>
-      <label for="import-data" class="button px-4 py-2 cursor-pointer rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors text-center">Importar Datos</label>
-      <input type="file" id="import-data" accept=".json" class="hidden">
-      <button id="reset-data" class="bg-red-500 hover:bg-red-700">Restablecer Datos</button>
-    </div>
+        <div id="settings" class="tab-content">
+          <div class="card">
+            <h2>Configuración</h2>
+            <div class="button-group flex-col md:flex-row">
+              <button id="export-data">Exportar Datos</button>
+              <label for="import-data" class="button px-4 py-2 cursor-pointer rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors text-center">Importar Datos</label>
+              <input type="file" id="import-data" accept=".json" class="hidden">
+              <button id="reset-data" class="bg-red-500 hover:bg-red-700">Restablecer Datos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
-  <div class="card mt-4">
-    <h2>Cambiar Nombre de Usuario</h2>
-    <div class="form-group">
-      <label for="current-user-name">Nombre actual</label>
-      <input type="text" id="current-user-name" disabled>
-    </div>
-    <div class="form-group">
-      <label for="new-user-name">Nuevo nombre de usuario</label>
-      <input type="text" id="new-user-name" placeholder="Ingresa un nuevo nombre">
-    </div>
-    <button id="update-name-button" class="mt-2">Actualizar Nombre</button>
-  </div>
-</div>
 
   <div id="authModal" class="modal">
     <div class="modal-content">
@@ -371,10 +380,6 @@ body.dark-theme {
           </div>
         </div>
         <div id="signup-form" class="auth-form">
-          <div class="form-group">
-            <label for="signup-name">Nombre de usuario</label>
-            <input type="text" id="signup-name" placeholder="Tu nombre">
-          </div>
           <div class="form-group">
             <label for="signup-email">Correo Electrónico</label>
             <input type="email" id="signup-email" placeholder="tu-email@ejemplo.com">
@@ -408,20 +413,16 @@ body.dark-theme {
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, where, updateDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, where, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    setLogLevel('debug'); // Ver los logs de Firestore en la consola
     
-    // **NOTA IMPORTANTE: Asegúrate de que esta configuración coincida exactamente con la de tu proyecto de Firebase**
-  const updateUserName = async (newName) => {
-    if (!db || !userId) return;
-    const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, {
-      name: newName
-    });
-    showModal('Nombre de usuario actualizado con éxito.');
-    // La UI se actualizará automáticamente gracias al listener en onAuthStateChanged
-  };
-    
+    /* ============================
+       Configuración de Firebase
+       ============================ */
+    // REEMPLAZA LOS VALORES SIGUIENTES CON LA CONFIGURACIÓN REAL DE TU PROYECTO DE FIREBASE
+    // Puedes encontrar esta configuración en la Consola de Firebase -> Configuración del proyecto -> Tus aplicaciones
     const firebaseConfig = {
       apiKey: "AIzaSyAwH7uq-TGTvn_PJhalYRRp6XskkZcTBP8",
       authDomain: "balancehubapp.firebaseapp.com",
@@ -452,13 +453,13 @@ body.dark-theme {
     const showAppContent = () => document.getElementById('main-content').style.display = 'block';
     const hideAppContent = () => document.getElementById('main-content').style.display = 'none';
 
-    const updateAuthUI = (user, userName = '') => {
+    const updateAuthUI = (user) => {
       const authButton = document.getElementById('auth-button');
       const logoutButton = document.getElementById('logout-button');
       const userDisplay = document.getElementById('user-display');
       
       if (user) {
-        userDisplay.textContent = `Hola, ${userName || 'Usuario'}`;
+        userDisplay.textContent = `ID de usuario: ${user.uid.substring(0, 8)}...`;
         authButton.style.display = 'none';
         logoutButton.style.display = 'inline-block';
         showAppContent();
@@ -496,7 +497,7 @@ body.dark-theme {
     const initFirestoreListeners = () => {
       if (!userId || !db) return;
 
-      onSnapshot(collection(db, `/artifacts/${appId}/users/${userId}/accounts`), (snapshot) => {
+      onSnapshot(collection(db, `/users/${userId}/accounts`), (snapshot) => {
         snapshot.docChanges().forEach(change => {
           const id = change.doc.id;
           const data = change.doc.data();
@@ -509,12 +510,12 @@ body.dark-theme {
         updateUI();
       });
 
-      onSnapshot(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), (snapshot) => {
+      onSnapshot(collection(db, `/users/${userId}/transactions`), (snapshot) => {
         appState.transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateUI();
       });
 
-      onSnapshot(collection(db, `/artifacts/${appId}/users/${userId}/budgets`), (snapshot) => {
+      onSnapshot(collection(db, `/users/${userId}/budgets`), (snapshot) => {
         appState.budgets = {};
         snapshot.docs.forEach(doc => {
           const data = doc.data();
@@ -523,7 +524,7 @@ body.dark-theme {
         updateUI();
       });
       
-      onSnapshot(collection(db, `/artifacts/${appId}/users/${userId}/unplannedLimits`), (snapshot) => {
+      onSnapshot(collection(db, `/users/${userId}/unplannedLimits`), (snapshot) => {
         appState.unplannedLimits = {};
         snapshot.docs.forEach(doc => {
           const data = doc.data();
@@ -532,7 +533,7 @@ body.dark-theme {
         updateUI();
       });
 
-      onSnapshot(collection(db, `/artifacts/${appId}/users/${userId}/fixedPayments`), (snapshot) => {
+      onSnapshot(collection(db, `/users/${userId}/fixedPayments`), (snapshot) => {
         appState.fixedPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateUI();
       });
@@ -540,7 +541,7 @@ body.dark-theme {
 
     const updateAccountBalanceInFirestore = async (accountId, amount, type) => {
       if (!appState.accounts[accountId]) return;
-      const accountRef = doc(db, `/artifacts/${appId}/users/${userId}/accounts`, accountId);
+      const accountRef = doc(db, `/users/${userId}/accounts`, accountId);
       let newBalance = appState.accounts[accountId].balance;
       if (type === 'expense') {
         newBalance -= amount;
@@ -553,23 +554,24 @@ body.dark-theme {
     /* ============================
        Lógica de Cuentas
        ============================ */
-    const addAccount = async (name, balance) => {
+    const addAccount = async (name, balance, currency) => {
       if (!db || !userId) return;
-      await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/accounts`), {
+      await addDoc(collection(db, `/users/${userId}/accounts`), {
         name,
         balance: Number(balance),
+        currency
       });
     };
 
     const deleteAccount = (id) => {
       showModal('¿Estás seguro de que quieres eliminar esta cuenta y todas sus transacciones?', true, async (confirmed) => {
         if (confirmed) {
-          const transactionsToDelete = query(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), where("accountId", "==", id));
+          const transactionsToDelete = query(collection(db, `/users/${userId}/transactions`), where("accountId", "==", id));
           const querySnapshot = await getDocs(transactionsToDelete);
-          const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/transactions`, d.id)));
+          const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, `/users/${userId}/transactions`, d.id)));
           await Promise.all(deletePromises);
 
-          await deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/accounts`, id));
+          await deleteDoc(doc(db, `/users/${userId}/accounts`, id));
         }
       });
     };
@@ -580,7 +582,7 @@ body.dark-theme {
     const addTransaction = async (accountId, description, amount, type, category, date) => {
       if (!db || !userId) return;
       const transaction = { accountId, description, amount: Number(amount), type, category, date };
-      await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), transaction);
+      await addDoc(collection(db, `/users/${userId}/transactions`), transaction);
       await updateAccountBalanceInFirestore(accountId, transaction.amount, transaction.type);
     };
 
@@ -590,12 +592,12 @@ body.dark-theme {
     const addFixedPayment = async (type, description, amount) => {
       if (!db || !userId) return;
       const payment = { type, description, amount: Number(amount) };
-      await addDoc(collection(db, `/artifacts/${appId}/users/${userId}/fixedPayments`), payment);
+      await addDoc(collection(db, `/users/${userId}/fixedPayments`), payment);
     };
 
     const deleteFixedPayment = async (id) => {
       if (!db || !userId) return;
-      await deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/fixedPayments`, id));
+      await deleteDoc(doc(db, `/users/${userId}/fixedPayments`, id));
     };
 
     /* ============================
@@ -603,19 +605,19 @@ body.dark-theme {
        ============================ */
     const addBudget = async (category, limit) => {
       if (!db || !userId) return;
-      const budgetRef = doc(db, `/artifacts/${appId}/users/${userId}/budgets`, category);
+      const budgetRef = doc(db, `/users/${userId}/budgets`, category);
       await setDoc(budgetRef, { category, limit: Number(limit) });
     };
 
     const addUnplannedLimit = async (category, amount) => {
       if (!db || !userId) return;
-      const unplannedRef = doc(db, `/artifacts/${appId}/users/${userId}/unplannedLimits`, category);
+      const unplannedRef = doc(db, `/users/${userId}/unplannedLimits`, category);
       await setDoc(unplannedRef, { category, amount: Number(amount) });
     };
 
     const deleteUnplannedLimit = async (category) => {
       if (!db || !userId) return;
-      const unplannedRef = doc(db, `/artifacts/${appId}/users/${userId}/unplannedLimits`, category);
+      const unplannedRef = doc(db, `/users/${userId}/unplannedLimits`, category);
       await deleteDoc(unplannedRef);
     };
 
@@ -711,7 +713,7 @@ body.dark-theme {
       document.getElementById('monthly-balance-summary').textContent = `$${monthlyBalance.toFixed(2)}`;
 
       const totalAccountList = document.getElementById('account-total-list');
-      totalAccountList.innerHTML = Object.values(appState.accounts).map(acc => `<li><span>${acc.name}</span><span>$${acc.balance.toFixed(2)}</span></li>`).join('');
+      totalAccountList.innerHTML = Object.values(appState.accounts).map(acc => `<li><span>${acc.name}</span><span>${acc.currency ? acc.currency : '$'}${acc.balance.toFixed(2)}</span></li>`).join('');
       
       updateAccountSelects();
       updateAccountList();
@@ -726,7 +728,7 @@ body.dark-theme {
     const updateAccountSelects = () => {
       const selectElements = document.querySelectorAll('#transaction-account');
       selectElements.forEach(select => {
-        select.innerHTML = Object.entries(appState.accounts).map(([id, acc]) => `<option value="${id}">${acc.name}</option>`).join('');
+        select.innerHTML = Object.entries(appState.accounts).map(([id, acc]) => `<option value="${id}">${acc.name} (${acc.currency})</option>`).join('');
       });
     };
 
@@ -734,8 +736,8 @@ body.dark-theme {
       const list = document.getElementById('account-list');
       list.innerHTML = Object.values(appState.accounts).map(acc => `
         <li>
-          <span>${acc.name}</span>
-          <span>$${acc.balance.toFixed(2)}</span>
+          <span>${acc.name} (${acc.currency})</span>
+          <span>${acc.currency ? acc.currency : '$'}${acc.balance.toFixed(2)}</span>
           <button onclick="deleteAccount('${acc.id}')" class="bg-red-500 hover:bg-red-700">Eliminar</button>
         </li>
       `).join('');
@@ -745,6 +747,7 @@ body.dark-theme {
       const list = document.getElementById('transaction-list');
       list.innerHTML = appState.transactions.map(t => {
         const accountName = appState.accounts[t.accountId] ? appState.accounts[t.accountId].name : 'Cuenta Eliminada';
+        const accountCurrency = appState.accounts[t.accountId] ? appState.accounts[t.accountId].currency : '$';
         const amountClass = t.type === 'expense' ? 'text-red-500' : 'text-green-500';
         return `
           <li>
@@ -754,7 +757,7 @@ body.dark-theme {
               <span class="text-xs text-gray-400">(${accountName})</span>
             </div>
             <div class="flex flex-col items-end">
-              <span class="${amountClass}">$${t.amount.toFixed(2)}</span>
+              <span class="${amountClass}">${accountCurrency}${t.amount.toFixed(2)}</span>
               <span class="text-sm text-gray-500">${t.category}</span>
             </div>
           </li>
@@ -901,14 +904,6 @@ body.dark-theme {
        ============================ */
     document.addEventListener('DOMContentLoaded', () => {
       // Configuración de pestañas y tema
-      document.getElementById('update-name-button').addEventListener('click', () => {
-        const newName = document.getElementById('new-user-name').value.trim();
-        if (newName) {
-          updateUserName(newName);
-        } else {
-          showModal('El nuevo nombre no puede estar vacío.');
-        }
-      });
       const setupTabs = () => {
         const tabs = document.querySelectorAll('.tab');
         const contents = document.querySelectorAll('.tab-content');
@@ -929,59 +924,55 @@ body.dark-theme {
       const setupThemeToggle = () => {
         const toggle = document.getElementById('theme-toggle');
         const body = document.body;
+
+        // Cargar el tema desde localStorage
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          body.className = savedTheme;
+        } else {
+          // Si no hay tema guardado, usa el tema oscuro por defecto
+          body.classList.add('dark-theme');
+          localStorage.setItem('theme', 'dark-theme');
+        }
+
         toggle.addEventListener('click', () => {
           if (body.classList.contains('light-theme')) {
             body.classList.remove('light-theme');
             body.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark-theme'); // Guardar la preferencia
           } else {
             body.classList.remove('dark-theme');
             body.classList.add('light-theme');
+            localStorage.setItem('theme', 'light-theme'); // Guardar la preferencia
           }
         });
       };
       setupThemeToggle();
 
       // Botones de autenticación
-      const authButton = document.getElementById('auth-button');
-      const logoutButton = document.getElementById('logout-button');
-      const showSignupButton = document.getElementById('show-signup-button');
-      const showLoginButton = document.getElementById('show-login-button');
-      const signInButton = document.getElementById('sign-in-button');
-      const signUpButton = document.getElementById('sign-up-button');
-      
-      // Deshabilita los botones de autenticación inicialmente
-      signUpButton.disabled = true;
-      signInButton.disabled = true;
-
-      authButton.addEventListener('click', showAuthModal);
-      logoutButton.addEventListener('click', () => signOut(auth));
-      showSignupButton.addEventListener('click', () => {
+      document.getElementById('auth-button').addEventListener('click', showAuthModal);
+      document.getElementById('logout-button').addEventListener('click', () => signOut(auth));
+      document.getElementById('show-signup-button').addEventListener('click', () => {
         document.getElementById('login-form').classList.remove('active');
         document.getElementById('signup-form').classList.add('active');
       });
-      showLoginButton.addEventListener('click', () => {
+      document.getElementById('show-login-button').addEventListener('click', () => {
         document.getElementById('signup-form').classList.remove('active');
         document.getElementById('login-form').classList.add('active');
       });
 
       // Lógica de los formularios de autenticación
-      signUpButton.addEventListener('click', async () => {
-        const name = document.getElementById('signup-name').value.trim();
+      document.getElementById('sign-up-button').addEventListener('click', async () => {
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
         const authError = document.getElementById('auth-error');
         authError.textContent = '';
-        if (!name || !email || !password) {
-          authError.textContent = 'El nombre, correo electrónico y contraseña son requeridos.';
+        if (!email || !password) {
+          authError.textContent = 'El correo electrónico y la contraseña son requeridos.';
           return;
         }
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          // ⚡️ NUEVO: Guarda el nombre de usuario en Firestore
-          await setDoc(doc(db, "users", userCredential.user.uid), {
-            name: name,
-            email: email
-          });
+          await createUserWithEmailAndPassword(auth, email, password);
           hideAuthModal();
         } catch (error) {
           console.error("Error signing up:", error);
@@ -989,7 +980,7 @@ body.dark-theme {
         }
       });
 
-      signInButton.addEventListener('click', async () => {
+      document.getElementById('sign-in-button').addEventListener('click', async () => {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const authError = document.getElementById('auth-error');
@@ -1031,8 +1022,9 @@ body.dark-theme {
       document.getElementById('add-account').addEventListener('click', () => {
         const name = document.getElementById('account-name').value.trim();
         const balance = Number(document.getElementById('account-balance').value);
+        const currency = document.getElementById('account-currency').value;
         if (!name) return showModal('El nombre de la cuenta es requerido');
-        addAccount(name, balance);
+        addAccount(name, balance, currency);
         document.getElementById('account-name').value = '';
         document.getElementById('account-balance').value = '';
       });
@@ -1107,24 +1099,11 @@ body.dark-theme {
       
       onAuthStateChanged(auth, async (user) => {
         isAuthReady = true;
-        // Habilita los botones de autenticación una vez que Firebase esté listo
-        signUpButton.disabled = false;
-        signInButton.disabled = false;
-        
+        updateAuthUI(user);
         if (user) {
           userId = user.uid;
-          // ⚡️ NUEVO: Obtén el nombre de usuario de Firestore
-          const userDocRef = doc(db, "users", userId);
-          const userDocSnap = await getDoc(userDocRef);
-          let userName = '';
-          if (userDocSnap.exists()) {
-            userName = userDocSnap.data().name;
-          }
-          updateAuthUI(user, userName);
           initFirestoreListeners();
         } else {
-          updateAuthUI(user, '');
-          // Si no hay un usuario autenticado, muestra el modal de inicio de sesión.
           showAuthModal();
         }
       });
@@ -1164,35 +1143,35 @@ body.dark-theme {
               
               if (importedData.accounts) {
                 const accountPromises = Object.entries(importedData.accounts).map(([id, data]) => {
-                  return setDoc(doc(db, `/artifacts/${appId}/users/${userId}/accounts`, id), data);
+                  return setDoc(doc(db, `/users/${userId}/accounts`, id), data);
                 });
                 await Promise.all(accountPromises);
               }
 
               if (importedData.transactions) {
                 const transactionPromises = importedData.transactions.map(data => {
-                  return addDoc(collection(db, `/artifacts/${appId}/users/${userId}/transactions`), data);
+                  return addDoc(collection(db, `/users/${userId}/transactions`), data);
                 });
                 await Promise.all(transactionPromises);
               }
               
               if (importedData.budgets) {
                 const budgetPromises = Object.entries(importedData.budgets).map(([category, limit]) => {
-                  return setDoc(doc(db, `/artifacts/${appId}/users/${userId}/budgets`, category), { category, limit });
+                  return setDoc(doc(db, `/users/${userId}/budgets`, category), { category, limit });
                 });
                 await Promise.all(budgetPromises);
               }
 
               if (importedData.unplannedLimits) {
                 const unplannedPromises = Object.entries(importedData.unplannedLimits).map(([category, amount]) => {
-                  return setDoc(doc(db, `/artifacts/${appId}/users/${userId}/unplannedLimits`, category), { category, amount });
+                  return setDoc(doc(db, `/users/${userId}/unplannedLimits`, category), { category, amount });
                 });
                 await Promise.all(unplannedPromises);
               }
 
               if (importedData.fixedPayments) {
                 const fixedPaymentPromises = importedData.fixedPayments.map(data => {
-                  return addDoc(collection(db, `/artifacts/${appId}/users/${userId}/fixedPayments`), data);
+                  return addDoc(collection(db, `/users/${userId}/fixedPayments`), data);
                 });
                 await Promise.all(fixedPaymentPromises);
               }
@@ -1213,9 +1192,9 @@ body.dark-theme {
       const performReset = async () => {
         const collections = ['accounts', 'transactions', 'budgets', 'unplannedLimits', 'fixedPayments'];
         for (const col of collections) {
-          const q = collection(db, `/artifacts/${appId}/users/${userId}/${col}`);
+          const q = collection(db, `/users/${userId}/${col}`);
           const docs = await getDocs(q);
-          const deletePromises = docs.docs.map(d => deleteDoc(doc(db, `/artifacts/${appId}/users/${userId}/${col}`, d.id)));
+          const deletePromises = docs.docs.map(d => deleteDoc(doc(db, `/users/${userId}/${col}`, d.id)));
           await Promise.all(deletePromises);
         }
         showModal('Datos reseteados con éxito.');
