@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>BalanceHub</title>
+<title>BalanceHub - Con Autenticación de Usuario</title>
 <style>
 :root {
   --primary-color: #2c3e50;
@@ -363,6 +363,10 @@ body.dark-theme {
         </div>
         <div id="signup-form" class="auth-form">
           <div class="form-group">
+            <label for="signup-name">Nombre de usuario</label>
+            <input type="text" id="signup-name" placeholder="Tu nombre">
+          </div>
+          <div class="form-group">
             <label for="signup-email">Correo Electrónico</label>
             <input type="email" id="signup-email" placeholder="tu-email@ejemplo.com">
           </div>
@@ -395,21 +399,19 @@ body.dark-theme {
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, where, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, where, updateDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // ** ¡¡¡ASEGÚRATE DE QUE ESTA SEA LA CONFIGURACIÓN DE TU PROYECTO DE FIREBASE!!! **
-    // Si has puesto una configuración de ejemplo, cámbiala por la tuya.
+    
+    // **NOTA IMPORTANTE: Asegúrate de que esta configuración coincida exactamente con la de tu proyecto de Firebase**
     const firebaseConfig = {
-      apiKey: "AIzaSyAwH7uq-TGTvn_PJhalYRRp6XskkZcTBP8", // <<< VERIFICA ESTA LÍNEA
-      authDomain: "balancehubapp.firebaseapp.com",       // <<< VERIFICA ESTA LÍNEA
-      projectId: "balancehubapp",                         // <<< VERIFICA ESTA LÍNEA
-      storageBucket: "balancehubapp.firebasestorage.app", // <<< VERIFICA ESTA LÍNEA
-      messagingSenderId: "691224718760",                 // <<< VERIFICA ESTA LÍNEA
-      appId: "1:691224718760:web:2963194c0e2abb664cc19d",   // <<< VERIFICA ESTA LÍNEA
-      measurementId: "G-BXBCVWG8BE"                      // <<< VERIFICA ESTA LÍNEA
+      apiKey: "AIzaSyAwH7uq-TGTvn_PJhalYRRp6XskkZcTBP8",
+      authDomain: "balancehubapp.firebaseapp.com",
+      projectId: "balancehubapp",
+      storageBucket: "balancehubapp.firebasestorage.app",
+      messagingSenderId: "691224718760",
+      appId: "1:691224718760:web:2963194c0e2abb664cc19d",
+      measurementId: "G-BXBCVWG8BE"
     };
-
 
     let app, auth, db, userId;
     let isAuthReady = false;
@@ -431,13 +433,13 @@ body.dark-theme {
     const showAppContent = () => document.getElementById('main-content').style.display = 'block';
     const hideAppContent = () => document.getElementById('main-content').style.display = 'none';
 
-    const updateAuthUI = (user) => {
+    const updateAuthUI = (user, userName = '') => {
       const authButton = document.getElementById('auth-button');
       const logoutButton = document.getElementById('logout-button');
       const userDisplay = document.getElementById('user-display');
       
       if (user) {
-        userDisplay.textContent = `ID de usuario: ${user.uid.substring(0, 8)}...`;
+        userDisplay.textContent = `Hola, ${userName || 'Usuario'}`;
         authButton.style.display = 'none';
         logoutButton.style.display = 'inline-block';
         showAppContent();
@@ -937,16 +939,22 @@ body.dark-theme {
 
       // Lógica de los formularios de autenticación
       signUpButton.addEventListener('click', async () => {
+        const name = document.getElementById('signup-name').value.trim();
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
         const authError = document.getElementById('auth-error');
         authError.textContent = '';
-        if (!email || !password) {
-          authError.textContent = 'El correo electrónico y la contraseña son requeridos.';
+        if (!name || !email || !password) {
+          authError.textContent = 'El nombre, correo electrónico y contraseña son requeridos.';
           return;
         }
         try {
-          await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          // ⚡️ NUEVO: Guarda el nombre de usuario en Firestore
+          await setDoc(doc(db, "users", userCredential.user.uid), {
+            name: name,
+            email: email
+          });
           hideAuthModal();
         } catch (error) {
           console.error("Error signing up:", error);
@@ -1076,11 +1084,19 @@ body.dark-theme {
         signUpButton.disabled = false;
         signInButton.disabled = false;
         
-        updateAuthUI(user);
         if (user) {
           userId = user.uid;
+          // ⚡️ NUEVO: Obtén el nombre de usuario de Firestore
+          const userDocRef = doc(db, "users", userId);
+          const userDocSnap = await getDoc(userDocRef);
+          let userName = '';
+          if (userDocSnap.exists()) {
+            userName = userDocSnap.data().name;
+          }
+          updateAuthUI(user, userName);
           initFirestoreListeners();
         } else {
+          updateAuthUI(user, '');
           // Si no hay un usuario autenticado, muestra el modal de inicio de sesión.
           showAuthModal();
         }
