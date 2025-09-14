@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BalanceHub - Con Autenticación de Usuario</title>
+<style>
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #27ae60;
+  --error-color: #e74c3c;
+  --text-color: #333;
+  --light-bg: #f5f5f5;
+  --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:0;color:var(--text-color);background-color:var(--light-bg);}
+header {background-color:var(--primary-color);color:white;padding:1rem;text-align:center;display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
+header h1 {margin:0;}
+.user-info {display:flex;align-items:center;gap:1rem;}
+.header-buttons button {background-color:transparent;border:1px solid white;color:white;padding:8px 16px;border-radius:5px;cursor:pointer;}
+.container {max-width:1200px;margin:0 auto;padding:20px;}
+.theme-selector {display:flex;justify-content:flex-end;margin-bottom:1rem;}
+.tab-container {margin-bottom:2rem;}
+.tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  border-bottom: 1px solid #ddd;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Para un desplazamiento suave en iOS */
+  scrollbar-width: none; /* Para Firefox */
+}
+.tabs::-webkit-scrollbar {
+  display: none; /* Para Chrome, Safari y Opera */
+}
+.tab {padding:10px 20px;cursor:pointer;transition:background-color 0.3s;border-top-left-radius:10px;border-top-right-radius:10px;margin-right:2px;background-color:#eee;flex-shrink: 0;}
+.tab.active {background-color:#fff;border:1px solid #ddd;border-bottom:none;font-weight:bold;color:var(--secondary-color);}
+.tab-content {display:none;padding:20px;background-color:#fff;border:1px solid #ddd;border-top:none;border-bottom-left-radius:10px;border-bottom-right-radius:10px;}
+.tab-content.active {display:block;}
+.dashboard-grid {display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:20px;}
+.card {background-color:#fff;border-radius:10px;padding:20px;box-shadow:var(--card-shadow);margin-bottom:20px;}
+.card h2 {margin-top:0;color:var(--primary-color);border-bottom:2px solid var(--secondary-color);padding-bottom:10px;}
+.card ul {list-style:none;padding:0;}
+.card li {padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+.card li:last-child {border-bottom:none;}
+.form-group {margin-bottom:15px;}
+.form-group label {display:block;margin-bottom:5px;font-weight:bold;}
+.form-group input, .form-group select {width:100%;padding:10px;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;}
+button {padding:10px 20px;background-color:var(--secondary-color);color:white;border:none;border-radius:5px;cursor:pointer;transition:background-color 0.3s;}
+button:hover {background-color:#2980b9;}
+.button-group {display:flex;gap:10px;margin-top:20px;}
+.button-group button {flex:1;}
+.chart-container {width:100%;height:300px;}
+.transaction-list {max-height:400px;overflow-y:auto;}
+.unplanned-list li, .account-list li {display:grid;grid-template-columns:1fr auto;gap:10px;}
+.unplanned-list li button {background-color:var(--error-color);}
+
+/* Custom Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+  backdrop-filter: blur(5px);
+  padding-top: 50px;
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 400px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+  text-align: center;
+}
+.modal-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.auth-form {display:none;padding:10px;}
+.auth-form.active {display:block;}
+
+/* Theme Switcher */
+body.dark-theme {
+  --primary-color: #f39c12;
+  --secondary-color: #34495e;
+  --accent-color: #c0392b;
+  --error-color: #e74c3c;
+  --text-color: #ecf0f1;
+  --light-bg: #2c3e50;
+  --card-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.dark-theme header {background-color:var(--primary-color);}
+.dark-theme .tab.active {background-color:var(--light-bg);color:var(--primary-color);border-color:var(--secondary-color);}
+.dark-theme .tab {background-color:#4a6582;}
+.dark-theme .tab-content, .dark-theme .card {background-color:#34495e;}
+.dark-theme .card h2 {border-color:var(--secondary-color);}
+.dark-theme button {background-color:var(--primary-color);}
+.dark-theme button:hover {background-color:#f1c40f;}
+.dark-theme .form-group input, .dark-theme .form-group select {background-color:#4a6582;color:white;border-color:var(--secondary-color);}
+.dark-theme .card li {border-color:#5c7b9b;}
+.dark-theme .unplanned-list li button {background-color:var(--error-color);}
+.dark-theme .modal-content {background-color: var(--secondary-color);}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body class="light-theme">
+
+  <header>
+    <h1>BalanceHub</h1>
+    <div class="user-info">
+      <div id="user-display"></div>
+      <button id="auth-button">Iniciar Sesión</button>
+      <button id="logout-button" style="display:none;">Cerrar Sesión</button>
+    </div>
+  </header>
+
+  <div id="main-content" style="display:none;">
+    <main class="container">
+      <div class="theme-selector">
+        <button id="theme-toggle" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-full shadow-md hover:bg-gray-300 transition-colors">
+          Cambiar Tema
+        </button>
+      </div>
+
+      <div class="tab-container">
+        <div class="tabs">
+          <div class="tab active" data-tab="dashboard">Dashboard</div>
+          <div class="tab" data-tab="accounts">Cuentas</div>
+          <div class="tab" data-tab="transactions">Transacciones</div>
+          <div class="tab" data-tab="fixed-payments">Pagos Fijos</div>
+          <div class="tab" data-tab="budget">Presupuesto</div>
+          <div class="tab" data-tab="projections">Proyecciones</div>
+          <div class="tab" data-tab="settings">Configuración</div>
+        </div>
+        
+        <div id="dashboard" class="tab-content active">
+          <div class="dashboard-grid">
+            <div class="card">
+              <h2>Resumen Mensual</h2>
+              <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                  <span>Ingresos:</span>
+                  <span id="monthly-income-summary" class="text-green-500 font-bold">$0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>Gastos:</span>
+                  <span id="monthly-expenses-summary" class="text-red-500 font-bold">$0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>Balance:</span>
+                  <span id="monthly-balance-summary" class="font-bold">$0.00</span>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <h2>Balance Total</h2>
+              <ul id="account-total-list">
+                </ul>
+            </div>
+            <div class="card col-span-1 md:col-span-2">
+              <h2>Gráfico de Gastos por Categoría</h2>
+              <div class="chart-container"><canvas id="category-chart"></canvas></div>
+            </div>
+            <div class="card col-span-1 md:col-span-2">
+              <h2>Gráfico de Balance Mensual</h2>
+              <div class="chart-container"><canvas id="balance-chart"></canvas></div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="accounts" class="tab-content">
+          <div class="card">
+            <h2>Añadir Cuenta</h2>
+            <div class="form-group">
+              <label for="account-name">Nombre de la cuenta</label>
+              <input type="text" id="account-name" placeholder="Ej: Cuenta de ahorros">
+            </div>
+            <div class="form-group">
+              <label for="account-balance">Balance inicial</label>
+              <input type="number" id="account-balance" placeholder="0.00" value="0" min="0">
+            </div>
+            <div class="form-group">
+              <label for="account-currency">Moneda</label>
+              <select id="account-currency">
+                <option value="DOP">Peso Dominicano (DOP)</option>
+                <option value="USD">Dólar Estadounidense (USD)</option>
+                <option value="EUR">Euro (EUR)</option>
+              </select>
+            </div>
+            <div class="button-group">
+              <button id="add-account">Añadir Cuenta</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Cuentas</h2>
+            <ul id="account-list" class="account-list">
+              </ul>
+          </div>
+        </div>
+        
+        <div id="transactions" class="tab-content">
+          <div class="card">
+            <h2>Añadir Transacción</h2>
+            <div class="form-group">
+              <label for="transaction-account">Cuenta</label>
+              <select id="transaction-account"></select>
+            </div>
+            <div class="form-group">
+              <label for="transaction-type">Tipo</label>
+              <select id="transaction-type">
+                <option value="expense">Gasto</option>
+                <option value="income">Ingreso</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="transaction-category">Categoría</label>
+              <input type="text" id="transaction-category" placeholder="Ej: Comida, Transporte">
+            </div>
+            <div class="form-group">
+              <label for="transaction-description">Descripción</label>
+              <input type="text" id="transaction-description" placeholder="Ej: Café de la mañana">
+            </div>
+            <div class="form-group">
+              <label for="transaction-amount">Monto</label>
+              <input type="number" id="transaction-amount" placeholder="0.00" min="0.01">
+            </div>
+            <div class="form-group">
+              <label for="transaction-date">Fecha</label>
+              <input type="date" id="transaction-date">
+            </div>
+            <div class="button-group">
+              <button id="add-transaction">Añadir Transacción</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Historial de Transacciones</h2>
+            <ul id="transaction-list" class="transaction-list">
+              </ul>
+          </div>
+        </div>
+
+        <div id="fixed-payments" class="tab-content">
+          <div class="card">
+            <h2>Añadir Pago Fijo</h2>
+            <div class="form-group">
+              <label for="fixed-payment-type">Tipo</label>
+              <select id="fixed-payment-type">
+                <option value="expense">Gasto recurrente</option>
+                <option value="income">Ingreso recurrente</option>
+                <option value="manual-expense">Gasto Manual</option>
+                <option value="manual-income">Ingreso Manual</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="fixed-payment-description">Descripción</label>
+              <input type="text" id="fixed-payment-description" placeholder="Ej: Renta, Salario">
+            </div>
+            <div class="form-group">
+              <label for="fixed-payment-amount">Monto</label>
+              <input type="number" id="fixed-payment-amount" placeholder="0.00" min="0">
+            </div>
+            <div class="button-group">
+              <button id="add-fixed-payment">Añadir Pago Fijo</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Pagos Fijos</h2>
+            <ul id="fixed-payments-list">
+              </ul>
+          </div>
+        </div>
+        
+        <div id="budget" class="tab-content">
+          <div class="card">
+            <h2>Presupuesto</h2>
+            <div class="form-group">
+              <label for="budget-category">Categoría</label>
+              <input type="text" id="budget-category" placeholder="Ej: Comida, Entretenimiento">
+            </div>
+            <div class="form-group">
+              <label for="budget-limit">Límite mensual</label>
+              <input type="number" id="budget-limit" placeholder="0.00" min="0">
+            </div>
+            <div class="button-group">
+              <button id="add-budget">Establecer Presupuesto</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Límites</h2>
+            <ul id="budget-list">
+              </ul>
+          </div>
+          <div class="card">
+            <h2>Límites de gasto no planificado</h2>
+            <p>Define un límite para categorías no definidas.</p>
+            <div class="form-group">
+              <label for="unplanned-limit-category">Categoría</label>
+              <input type="text" id="unplanned-limit-category" placeholder="Ej: Emergencia, Impulso">
+            </div>
+            <div class="form-group">
+              <label for="unplanned-limit-amount">Monto</label>
+              <input type="number" id="unplanned-limit-amount" placeholder="0.00" min="0">
+            </div>
+            <div class="button-group">
+              <button id="add-unplanned-limit">Añadir Límite</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Límites no planificados</h2>
+            <ul id="unplanned-limits-list" class="unplanned-list">
+              </ul>
+          </div>
+        </div>
+
+        <div id="projections" class="tab-content">
+          <div class="card">
+            <h2>Proyecciones</h2>
+            <div class="form-group">
+              <label for="projection-months">Número de meses para proyectar</label>
+              <input type="number" id="projection-months" value="12" min="1">
+            </div>
+            <div class="button-group">
+              <button id="calculate-projection">Calcular Proyección</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Resultado de Proyección</h2>
+            <p id="projection-result">Pulsa "Calcular Proyección" para ver el resultado.</p>
+            <div class="chart-container"><canvas id="projection-chart"></canvas></div>
+          </div>
+        </div>
+        
+        <div id="settings" class="tab-content">
+          <div class="card">
+            <h2>Configuración</h2>
+            <div class="button-group flex-col md:flex-row">
+              <button id="export-data">Exportar Datos</button>
+              <label for="import-data" class="button px-4 py-2 cursor-pointer rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors text-center">Importar Datos</label>
+              <input type="file" id="import-data" accept=".json" class="hidden">
+              <button id="reset-data" class="bg-red-500 hover:bg-red-700">Restablecer Datos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <h2>Autenticación</h2>
+      <div id="auth-forms">
+        <div id="login-form" class="auth-form active">
+          <div class="form-group">
+            <label for="login-email">Correo Electrónico</label>
+            <input type="email" id="login-email" placeholder="tu-email@ejemplo.com">
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <input type="password" id="login-password" placeholder="********">
+          </div>
+          <div class="button-group">
+            <button id="sign-in-button">Iniciar Sesión</button>
+            <button id="show-signup-button">Registrarse</button>
+          </div>
+        </div>
+        <div id="signup-form" class="auth-form">
+          <div class="form-group">
+            <label for="signup-email">Correo Electrónico</label>
+            <input type="email" id="signup-email" placeholder="tu-email@ejemplo.com">
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Contraseña</label>
+            <input type="password" id="signup-password" placeholder="Crea una contraseña">
+          </div>
+          <div class="button-group">
+            <button id="sign-up-button">Registrarse</button>
+            <button id="show-login-button">Volver</button>
+          </div>
+        </div>
+      </div>
+      <p id="auth-error" class="text-red-500 mt-4"></p>
+    </div>
+  </div>
+
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <div class="modal-buttons">
+        <button id="modal-ok">OK</button>
+        <button id="modal-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, query, where, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    setLogLevel('debug'); // Ver los logs de Firestore en la consola
+    
+    /* ============================
+       Configuración de Firebase
+       ============================ */
+    // REEMPLAZA LOS VALORES SIGUIENTES CON LA CONFIGURACIÓN REAL DE TU PROYECTO DE FIREBASE
+    // Puedes encontrar esta configuración en la Consola de Firebase -> Configuración del proyecto -> Tus aplicaciones
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwH7uq-TGTvn_PJhalYRRp6XskkZcTBP8",
+      authDomain: "balancehubapp.firebaseapp.com",
+      projectId: "balancehubapp",
+      storageBucket: "balancehubapp.firebasestorage.app",
+      messagingSenderId: "691224718760",
+      appId: "1:691224718760:web:2963194c0e2abb664cc19d",
+      measurementId: "G-BXBCVWG8BE"
+    };
+
+    let app, auth, db, userId;
+    let isAuthReady = false;
+
+    const appState = {
+      accounts: {},
+      transactions: [],
+      budgets: {},
+      unplannedLimits: {},
+      fixedPayments: [],
+    };
+
+    /* ============================
+       Lógica de la Interfaz
+       ============================ */
+    const showAuthModal = () => document.getElementById('authModal').style.display = 'block';
+    const hideAuthModal = () => document.getElementById('authModal').style.display = 'none';
+
+    const showAppContent = () => document.getElementById('main-content').style.display = 'block';
+    const hideAppContent = () => document.getElementById('main-content').style.display = 'none';
+
+    const updateAuthUI = (user) => {
+      const authButton = document.getElementById('auth-button');
+      const logoutButton = document.getElementById('logout-button');
+      const userDisplay = document.getElementById('user-display');
+      
+      if (user) {
+        userDisplay.textContent = `ID de usuario: ${user.uid.substring(0, 8)}...`;
+        authButton.style.display = 'none';
+        logoutButton.style.display = 'inline-block';
+        showAppContent();
+      } else {
+        userDisplay.textContent = '';
+        authButton.style.display = 'inline-block';
+        logoutButton.style.display = 'none';
+        hideAppContent();
+      }
+    };
+    
+    let modalCallback = null;
+
+    const showModal = (message, isConfirm = false, callback = null) => {
+      const modal = document.getElementById('myModal');
+      const modalMessage = document.getElementById('modal-message');
+      const modalOkBtn = document.getElementById('modal-ok');
+      const modalCancelBtn = document.getElementById('modal-cancel');
+
+      modalMessage.textContent = message;
+      modalCallback = callback;
+      if (isConfirm) {
+        modalOkBtn.style.display = 'inline-block';
+        modalCancelBtn.style.display = 'inline-block';
+      } else {
+        modalOkBtn.style.display = 'inline-block';
+        modalCancelBtn.style.display = 'none';
+      }
+      modal.style.display = 'block';
+    };
+
+    /* ============================
+       Persistencia de datos (Firestore)
+       ============================ */
+    const initFirestoreListeners = () => {
+      if (!userId || !db) return;
+
+      onSnapshot(collection(db, `/users/${userId}/accounts`), (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          const id = change.doc.id;
+          const data = change.doc.data();
+          if (change.type === "added" || change.type === "modified") {
+            appState.accounts[id] = { id, ...data };
+          } else if (change.type === "removed") {
+            delete appState.accounts[id];
+          }
+        });
+        updateUI();
+      });
+
+      onSnapshot(collection(db, `/users/${userId}/transactions`), (snapshot) => {
+        appState.transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateUI();
+      });
+
+      onSnapshot(collection(db, `/users/${userId}/budgets`), (snapshot) => {
+        appState.budgets = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          appState.budgets[data.category] = data.limit;
+        });
+        updateUI();
+      });
+      
+      onSnapshot(collection(db, `/users/${userId}/unplannedLimits`), (snapshot) => {
+        appState.unplannedLimits = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          appState.unplannedLimits[data.category] = data.amount;
+        });
+        updateUI();
+      });
+
+      onSnapshot(collection(db, `/users/${userId}/fixedPayments`), (snapshot) => {
+        appState.fixedPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateUI();
+      });
+    };
+
+    const updateAccountBalanceInFirestore = async (accountId, amount, type) => {
+      if (!appState.accounts[accountId]) return;
+      const accountRef = doc(db, `/users/${userId}/accounts`, accountId);
+      let newBalance = appState.accounts[accountId].balance;
+      if (type === 'expense') {
+        newBalance -= amount;
+      } else {
+        newBalance += amount;
+      }
+      await updateDoc(accountRef, { balance: newBalance });
+    };
+
+    /* ============================
+       Lógica de Cuentas
+       ============================ */
+    const addAccount = async (name, balance, currency) => {
+      if (!db || !userId) return;
+      await addDoc(collection(db, `/users/${userId}/accounts`), {
+        name,
+        balance: Number(balance),
+        currency
+      });
+    };
+
+    const deleteAccount = (id) => {
+      showModal('¿Estás seguro de que quieres eliminar esta cuenta y todas sus transacciones?', true, async (confirmed) => {
+        if (confirmed) {
+          const transactionsToDelete = query(collection(db, `/users/${userId}/transactions`), where("accountId", "==", id));
+          const querySnapshot = await getDocs(transactionsToDelete);
+          const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, `/users/${userId}/transactions`, d.id)));
+          await Promise.all(deletePromises);
+
+          await deleteDoc(doc(db, `/users/${userId}/accounts`, id));
+        }
+      });
+    };
+
+    /* ============================
+       Lógica de Transacciones
+       ============================ */
+    const addTransaction = async (accountId, description, amount, type, category, date) => {
+      if (!db || !userId) return;
+      const transaction = { accountId, description, amount: Number(amount), type, category, date };
+      await addDoc(collection(db, `/users/${userId}/transactions`), transaction);
+      await updateAccountBalanceInFirestore(accountId, transaction.amount, transaction.type);
+    };
+
+    /* ============================
+       Lógica de Pagos Fijos
+       ============================ */
+    const addFixedPayment = async (type, description, amount) => {
+      if (!db || !userId) return;
+      const payment = { type, description, amount: Number(amount) };
+      await addDoc(collection(db, `/users/${userId}/fixedPayments`), payment);
+    };
+
+    const deleteFixedPayment = async (id) => {
+      if (!db || !userId) return;
+      await deleteDoc(doc(db, `/users/${userId}/fixedPayments`, id));
+    };
+
+    /* ============================
+       Lógica de Presupuesto
+       ============================ */
+    const addBudget = async (category, limit) => {
+      if (!db || !userId) return;
+      const budgetRef = doc(db, `/users/${userId}/budgets`, category);
+      await setDoc(budgetRef, { category, limit: Number(limit) });
+    };
+
+    const addUnplannedLimit = async (category, amount) => {
+      if (!db || !userId) return;
+      const unplannedRef = doc(db, `/users/${userId}/unplannedLimits`, category);
+      await setDoc(unplannedRef, { category, amount: Number(amount) });
+    };
+
+    const deleteUnplannedLimit = async (category) => {
+      if (!db || !userId) return;
+      const unplannedRef = doc(db, `/users/${userId}/unplannedLimits`, category);
+      await deleteDoc(unplannedRef);
+    };
+
+    /* ============================
+       Lógica de Proyecciones
+       ============================ */
+    const calculateProjections = () => {
+      const monthsToProject = Number(document.getElementById('projection-months').value) || 12;
+
+      const monthlyIncomeRecurrent = appState.fixedPayments
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const monthlyExpensesRecurrent = appState.fixedPayments
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const totalBalanceManualAdjustment = appState.fixedPayments
+        .filter(t => t.type === 'manual-income')
+        .reduce((sum, t) => sum + t.amount, 0) - appState.fixedPayments
+        .filter(t => t.type === 'manual-expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const totalIncome = Object.values(appState.transactions)
+        .filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) + monthlyIncomeRecurrent;
+
+      const totalExpenses = Object.values(appState.transactions)
+        .filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) + monthlyExpensesRecurrent;
+
+      const avgMonthlyIncome = totalIncome / monthsToProject;
+      const avgMonthlyExpenses = totalExpenses / monthsToProject;
+
+      let currentBalance = Object.values(appState.accounts).reduce((sum, acc) => sum + acc.balance, 0);
+
+      const monthlyBalances = [currentBalance + totalBalanceManualAdjustment];
+      for (let i = 0; i < monthsToProject; i++) {
+        currentBalance += (avgMonthlyIncome - avgMonthlyExpenses);
+        monthlyBalances.push(currentBalance);
+      }
+
+      const projectionResultEl = document.getElementById('projection-result');
+      projectionResultEl.textContent = `Proyección para ${monthsToProject} meses: $${monthlyBalances[monthlyBalances.length - 1].toFixed(2)}`;
+
+      drawProjectionChart(monthlyBalances, monthsToProject);
+    };
+
+    let projectionChartInstance = null;
+    const drawProjectionChart = (data, months) => {
+      const labels = Array.from({ length: months + 1 }, (_, i) => `Mes ${i}`);
+      const ctx = document.getElementById('projection-chart').getContext('2d');
+      if (projectionChartInstance) projectionChartInstance.destroy();
+      projectionChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Balance Proyectado',
+            data: data,
+            borderColor: 'rgb(54, 162, 235)',
+            tension: 0.1,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    };
+
+    /* ============================
+       Lógica de Dashboard y Gráficos
+       ============================ */
+    let categoryChartInstance = null;
+    let balanceChartInstance = null;
+
+    const updateUI = () => {
+      const currentMonth = new Date().getMonth();
+      const transactionsThisMonth = appState.transactions.filter(t => {
+        if (!t.date) return false;
+        const transactionDate = new Date(t.date);
+        return transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === new Date().getFullYear();
+      });
+
+      const monthlyIncome = transactionsThisMonth.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      const monthlyExpenses = transactionsThisMonth.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const monthlyBalance = monthlyIncome - monthlyExpenses;
+
+      document.getElementById('monthly-income-summary').textContent = `$${monthlyIncome.toFixed(2)}`;
+      document.getElementById('monthly-expenses-summary').textContent = `$${monthlyExpenses.toFixed(2)}`;
+      document.getElementById('monthly-balance-summary').textContent = `$${monthlyBalance.toFixed(2)}`;
+
+      const totalAccountList = document.getElementById('account-total-list');
+      totalAccountList.innerHTML = Object.values(appState.accounts).map(acc => `<li><span>${acc.name}</span><span>${acc.currency ? acc.currency : '$'}${acc.balance.toFixed(2)}</span></li>`).join('');
+      
+      updateAccountSelects();
+      updateAccountList();
+      updateTransactionList();
+      updateFixedPaymentsList();
+      updateBudgetList();
+      updateCategoryDropdowns();
+      updateUnplannedLimitsList();
+      drawCharts();
+    };
+    
+    const updateAccountSelects = () => {
+      const selectElements = document.querySelectorAll('#transaction-account');
+      selectElements.forEach(select => {
+        select.innerHTML = Object.entries(appState.accounts).map(([id, acc]) => `<option value="${id}">${acc.name} (${acc.currency})</option>`).join('');
+      });
+    };
+
+    const updateAccountList = () => {
+      const list = document.getElementById('account-list');
+      list.innerHTML = Object.values(appState.accounts).map(acc => `
+        <li>
+          <span>${acc.name} (${acc.currency})</span>
+          <span>${acc.currency ? acc.currency : '$'}${acc.balance.toFixed(2)}</span>
+          <button onclick="deleteAccount('${acc.id}')" class="bg-red-500 hover:bg-red-700">Eliminar</button>
+        </li>
+      `).join('');
+    };
+
+    const updateTransactionList = () => {
+      const list = document.getElementById('transaction-list');
+      list.innerHTML = appState.transactions.map(t => {
+        const accountName = appState.accounts[t.accountId] ? appState.accounts[t.accountId].name : 'Cuenta Eliminada';
+        const accountCurrency = appState.accounts[t.accountId] ? appState.accounts[t.accountId].currency : '$';
+        const amountClass = t.type === 'expense' ? 'text-red-500' : 'text-green-500';
+        return `
+          <li>
+            <div class="flex flex-col">
+              <span>${t.description}</span>
+              <span class="text-sm text-gray-500">${new Date(t.date).toLocaleDateString()}</span>
+              <span class="text-xs text-gray-400">(${accountName})</span>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="${amountClass}">${accountCurrency}${t.amount.toFixed(2)}</span>
+              <span class="text-sm text-gray-500">${t.category}</span>
+            </div>
+          </li>
+        `;
+      }).join('');
+    };
+
+    const updateFixedPaymentsList = () => {
+      const list = document.getElementById('fixed-payments-list');
+      list.innerHTML = appState.fixedPayments.map(t => {
+        const amountClass = t.type.includes('expense') ? 'text-red-500' : 'text-green-500';
+        return `
+          <li>
+            <div class="flex flex-col">
+              <span>${t.description}</span>
+              <span class="text-xs text-gray-400">${t.type}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="${amountClass}">$${t.amount.toFixed(2)}</span>
+              <button onclick="deleteFixedPayment('${t.id}')" class="bg-red-500 hover:bg-red-700">Eliminar</button>
+            </div>
+          </li>
+        `;
+      }).join('');
+    };
+
+    const updateBudgetList = () => {
+      const list = document.getElementById('budget-list');
+      const expensesByCategory = appState.transactions
+        .filter(t => t.type === 'expense')
+        .reduce((acc, t) => {
+          acc[t.category] = (acc[t.category] || 0) + t.amount;
+          return acc;
+        }, {});
+
+      list.innerHTML = Object.entries(appState.budgets).map(([category, limit]) => {
+        const spent = expensesByCategory[category] || 0;
+        const remaining = limit - spent;
+        const alertClass = remaining < 0 ? 'text-red-500 font-bold' : '';
+        return `
+          <li>
+            <span>${category}</span>
+            <span>
+              <span class="text-gray-500">$${spent.toFixed(2)} / </span>
+              <span>$${limit.toFixed(2)}</span>
+              <span class="${alertClass} ml-2">($${remaining.toFixed(2)} restante)</span>
+            </span>
+          </li>
+        `;
+      }).join('');
+    };
+
+    const updateCategoryDropdowns = () => {
+      const categories = Array.from(new Set(appState.transactions.map(t => t.category)));
+    };
+
+    const updateUnplannedLimitsList = () => {
+      const list = document.getElementById('unplanned-limits-list');
+      list.innerHTML = Object.entries(appState.unplannedLimits).map(([cat, amt]) => `
+        <li>
+          <span>${cat}</span>
+          <span>$${amt.toFixed(2)}</span>
+          <button onclick="deleteUnplannedLimit('${cat}')" class="bg-red-500 hover:bg-red-700">Eliminar</button>
+        </li>
+      `).join('');
+    };
+    
+    const drawCharts = () => {
+      const expensesByCategory = appState.transactions
+        .filter(t => t.type === 'expense')
+        .reduce((acc, t) => {
+          acc[t.category] = (acc[t.category] || 0) + t.amount;
+          return acc;
+        }, {});
+
+      const categoryLabels = Object.keys(expensesByCategory);
+      const categoryData = Object.values(expensesByCategory);
+      const categoryColors = categoryLabels.map(() => `hsl(${Math.random() * 360}, 70%, 50%)`);
+
+      const categoryCtx = document.getElementById('category-chart').getContext('2d');
+      if (categoryChartInstance) categoryChartInstance.destroy();
+      categoryChartInstance = new Chart(categoryCtx, {
+        type: 'pie',
+        data: {
+          labels: categoryLabels,
+          datasets: [{
+            label: 'Gastos por Categoría',
+            data: categoryData,
+            backgroundColor: categoryColors,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', },
+          }
+        }
+      });
+
+      const monthlyData = appState.transactions.reduce((acc, t) => {
+        const month = new Date(t.date).toISOString().slice(0, 7);
+        if (!acc[month]) acc[month] = { income: 0, expense: 0 };
+        if (t.type === 'income') acc[month].income += t.amount;
+        if (t.type === 'expense') acc[month].expense += t.amount;
+        return acc;
+      }, {});
+
+      const monthlyLabels = Object.keys(monthlyData).sort();
+      const monthlyBalanceData = monthlyLabels.reduce((acc, month) => {
+        const currentBalance = (acc.length > 0 ? acc[acc.length - 1] : 0) + monthlyData[month].income - monthlyData[month].expense;
+        acc.push(currentBalance);
+        return acc;
+      }, []);
+
+      const balanceCtx = document.getElementById('balance-chart').getContext('2d');
+      if (balanceChartInstance) balanceChartInstance.destroy();
+      balanceChartInstance = new Chart(balanceCtx, {
+        type: 'bar',
+        data: {
+          labels: monthlyLabels,
+          datasets: [{
+            label: 'Balance Mensual',
+            data: monthlyBalanceData,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    };
+
+    /* ============================
+       Listeners de eventos
+       ============================ */
+    document.addEventListener('DOMContentLoaded', () => {
+      // Configuración de pestañas y tema
+      const setupTabs = () => {
+        const tabs = document.querySelectorAll('.tab');
+        const contents = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+            if (tab.dataset.tab === 'dashboard') {
+              updateUI();
+            }
+          });
+        });
+      };
+      setupTabs();
+
+      const setupThemeToggle = () => {
+        const toggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Cargar el tema desde localStorage
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          body.className = savedTheme;
+        } else {
+          // Si no hay tema guardado, usa el tema oscuro por defecto
+          body.classList.add('dark-theme');
+          localStorage.setItem('theme', 'dark-theme');
+        }
+
+        toggle.addEventListener('click', () => {
+          if (body.classList.contains('light-theme')) {
+            body.classList.remove('light-theme');
+            body.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark-theme'); // Guardar la preferencia
+          } else {
+            body.classList.remove('dark-theme');
+            body.classList.add('light-theme');
+            localStorage.setItem('theme', 'light-theme'); // Guardar la preferencia
+          }
+        });
+      };
+      setupThemeToggle();
+
+      // Botones de autenticación
+      document.getElementById('auth-button').addEventListener('click', showAuthModal);
+      document.getElementById('logout-button').addEventListener('click', () => signOut(auth));
+      document.getElementById('show-signup-button').addEventListener('click', () => {
+        document.getElementById('login-form').classList.remove('active');
+        document.getElementById('signup-form').classList.add('active');
+      });
+      document.getElementById('show-login-button').addEventListener('click', () => {
+        document.getElementById('signup-form').classList.remove('active');
+        document.getElementById('login-form').classList.add('active');
+      });
+
+      // Lógica de los formularios de autenticación
+      document.getElementById('sign-up-button').addEventListener('click', async () => {
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const authError = document.getElementById('auth-error');
+        authError.textContent = '';
+        if (!email || !password) {
+          authError.textContent = 'El correo electrónico y la contraseña son requeridos.';
+          return;
+        }
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          hideAuthModal();
+        } catch (error) {
+          console.error("Error signing up:", error);
+          authError.textContent = `Error al registrar: ${error.message}`;
+        }
+      });
+
+      document.getElementById('sign-in-button').addEventListener('click', async () => {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const authError = document.getElementById('auth-error');
+        authError.textContent = '';
+        if (!email || !password) {
+          authError.textContent = 'El correo electrónico y la contraseña son requeridos.';
+          return;
+        }
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          hideAuthModal();
+        } catch (error) {
+          console.error("Error signing in:", error);
+          authError.textContent = `Error al iniciar sesión: ${error.message}`;
+        }
+      });
+      
+      // Lógica de los modales de confirmación
+      const modalOkBtn = document.getElementById('modal-ok');
+      const modalCancelBtn = document.getElementById('modal-cancel');
+      
+      modalOkBtn.addEventListener('click', () => {
+        const modal = document.getElementById('myModal');
+        modal.style.display = 'none';
+        if (modalCallback) {
+          modalCallback(true);
+        }
+      });
+    
+      modalCancelBtn.addEventListener('click', () => {
+        const modal = document.getElementById('myModal');
+        modal.style.display = 'none';
+        if (modalCallback) {
+          modalCallback(false);
+        }
+      });
+
+      // Cuentas
+      document.getElementById('add-account').addEventListener('click', () => {
+        const name = document.getElementById('account-name').value.trim();
+        const balance = Number(document.getElementById('account-balance').value);
+        const currency = document.getElementById('account-currency').value;
+        if (!name) return showModal('El nombre de la cuenta es requerido');
+        addAccount(name, balance, currency);
+        document.getElementById('account-name').value = '';
+        document.getElementById('account-balance').value = '';
+      });
+
+      // Transacciones
+      document.getElementById('add-transaction').addEventListener('click', () => {
+        const accountId = document.getElementById('transaction-account').value;
+        const description = document.getElementById('transaction-description').value.trim();
+        const amount = Number(document.getElementById('transaction-amount').value);
+        const type = document.getElementById('transaction-type').value;
+        const category = document.getElementById('transaction-category').value.trim();
+        const date = document.getElementById('transaction-date').value;
+
+        if (!accountId || !description || amount <= 0 || !category || !date) {
+          return showModal('Todos los campos son requeridos y el monto debe ser positivo.');
+        }
+        addTransaction(accountId, description, amount, type, category, date);
+        document.getElementById('transaction-description').value = '';
+        document.getElementById('transaction-amount').value = '';
+        document.getElementById('transaction-date').value = '';
+      });
+
+      // Pagos fijos
+      document.getElementById('add-fixed-payment').addEventListener('click', () => {
+        const type = document.getElementById('fixed-payment-type').value;
+        const description = document.getElementById('fixed-payment-description').value.trim();
+        const amount = Number(document.getElementById('fixed-payment-amount').value);
+        if (!description || amount <= 0) {
+          return showModal('La descripción y el monto son requeridos.');
+        }
+        addFixedPayment(type, description, amount);
+        document.getElementById('fixed-payment-description').value = '';
+        document.getElementById('fixed-payment-amount').value = '';
+      });
+      
+      // Presupuesto
+      document.getElementById('add-budget').addEventListener('click', () => {
+        const category = document.getElementById('budget-category').value.trim();
+        const limit = Number(document.getElementById('budget-limit').value);
+        if (!category || limit <= 0) {
+          return showModal('Categoría y límite requeridos.');
+        }
+        addBudget(category, limit);
+        document.getElementById('budget-category').value = '';
+        document.getElementById('budget-limit').value = '';
+      });
+      
+      // Límites no planificados
+      document.getElementById('add-unplanned-limit').addEventListener('click', () => {
+        const category = document.getElementById('unplanned-limit-category').value.trim();
+        const amount = Number(document.getElementById('unplanned-limit-amount').value);
+        if (!category || amount <= 0) {
+          return showModal('Categoría y monto requeridos.');
+        }
+        addUnplannedLimit(category, amount);
+        document.getElementById('unplanned-limit-category').value = '';
+        document.getElementById('unplanned-limit-amount').value = '';
+      });
+
+      // Exportar / Importar / Resetear
+      document.getElementById('export-data').addEventListener('click', exportData);
+      document.getElementById('import-data').addEventListener('change', e => { if(e.target.files[0]) importData(e.target.files[0]); });
+      document.getElementById('reset-data').addEventListener('click', resetData);
+
+      // Proyecciones
+      document.getElementById('calculate-projection').addEventListener('click', () => calculateProjections());
+
+      // Autenticación de Firebase
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      
+      onAuthStateChanged(auth, async (user) => {
+        isAuthReady = true;
+        updateAuthUI(user);
+        if (user) {
+          userId = user.uid;
+          initFirestoreListeners();
+        } else {
+          showAuthModal();
+        }
+      });
+    });
+
+    /* ============================
+       Funciones de Exportación / Importación / Reset
+       ============================ */
+    const exportData = () => {
+      const data = {
+        accounts: appState.accounts,
+        transactions: appState.transactions,
+        budgets: appState.budgets,
+        unplannedLimits: appState.unplannedLimits,
+        fixedPayments: appState.fixedPayments
+      };
+      const dataStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `balancehub_data_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    const importData = (file) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          showModal('Importar datos sobrescribirá los datos actuales. ¿Continuar?', true, async (confirmed) => {
+            if (confirmed) {
+              await resetData(false);
+              
+              if (importedData.accounts) {
+                const accountPromises = Object.entries(importedData.accounts).map(([id, data]) => {
+                  return setDoc(doc(db, `/users/${userId}/accounts`, id), data);
+                });
+                await Promise.all(accountPromises);
+              }
+
+              if (importedData.transactions) {
+                const transactionPromises = importedData.transactions.map(data => {
+                  return addDoc(collection(db, `/users/${userId}/transactions`), data);
+                });
+                await Promise.all(transactionPromises);
+              }
+              
+              if (importedData.budgets) {
+                const budgetPromises = Object.entries(importedData.budgets).map(([category, limit]) => {
+                  return setDoc(doc(db, `/users/${userId}/budgets`, category), { category, limit });
+                });
+                await Promise.all(budgetPromises);
+              }
+
+              if (importedData.unplannedLimits) {
+                const unplannedPromises = Object.entries(importedData.unplannedLimits).map(([category, amount]) => {
+                  return setDoc(doc(db, `/users/${userId}/unplannedLimits`, category), { category, amount });
+                });
+                await Promise.all(unplannedPromises);
+              }
+
+              if (importedData.fixedPayments) {
+                const fixedPaymentPromises = importedData.fixedPayments.map(data => {
+                  return addDoc(collection(db, `/users/${userId}/fixedPayments`), data);
+                });
+                await Promise.all(fixedPaymentPromises);
+              }
+
+              showModal('Datos importados con éxito.');
+              updateUI();
+            }
+          });
+        } catch (error) {
+          showModal('Error al importar el archivo. Asegúrate de que es un archivo JSON válido.');
+          console.error('Error importing data:', error);
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    const resetData = async (withConfirmation = true) => {
+      const performReset = async () => {
+        const collections = ['accounts', 'transactions', 'budgets', 'unplannedLimits', 'fixedPayments'];
+        for (const col of collections) {
+          const q = collection(db, `/users/${userId}/${col}`);
+          const docs = await getDocs(q);
+          const deletePromises = docs.docs.map(d => deleteDoc(doc(db, `/users/${userId}/${col}`, d.id)));
+          await Promise.all(deletePromises);
+        }
+        showModal('Datos reseteados con éxito.');
+        updateUI();
+      };
+      
+      if (withConfirmation) {
+        showModal('Esto eliminará todos tus datos. ¿Estás seguro?', true, (confirmed) => {
+          if (confirmed) {
+            performReset();
+          }
+        });
+      } else {
+        await performReset();
+      }
+    };
+    
+    // Funciones globales para que los listeners en el HTML funcionen
+    window.deleteAccount = deleteAccount;
+    window.deleteFixedPayment = deleteFixedPayment;
+    window.deleteUnplannedLimit = deleteUnplannedLimit;
+  </script>
+</body>
+</html>
